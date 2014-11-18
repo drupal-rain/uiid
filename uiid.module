@@ -1,6 +1,21 @@
 <?php
 
 /**
+ * Helper function for #uiid default.
+ */
+function uiid_element_settings_default() {
+  return array(
+    'source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    'min' => 4,
+    'max' => 4,
+    'edit' => TRUE,
+    'generate' => TRUE,
+    'unique_callback' => NULL,
+    'generate_callback' => 'uiid_generate',
+  );
+}
+
+/**
  *  Implements hook_element_info().
  */
 function uiid_element_info() {
@@ -11,14 +26,9 @@ function uiid_element_info() {
     '#theme' => array('uiid_field'),
     '#theme_wrappers' => array('form_element'),
     '#tree' => TRUE,
+    '#element_validate' => array('uiid_element_validate'),
     // Custom properties
-    '#uiid' => array(
-      'source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-      'min' => 5,
-      'max' => 5,
-      'unique_callback' => NULL,
-      'generate_callback' => 'uiid_generate',
-    ),
+    '#uiid' => uiid_element_settings_default(),
   );
   return $elements;
 }
@@ -27,6 +37,10 @@ function uiid_element_info() {
  * Process callback for uiid element.
  */
 function uiid_element_process($element, $form_state, $complete_form) {
+  // Send in #uuid defaults, while sub properties are not automatically being inserted.
+  $element['#uiid'] += uiid_element_settings_default();
+
+  // Unique #id
   $id = 'uiid-' . sha1(implode('-', $element['#parents']));
   $element['value'] = array(
     '#type' => 'textfield',
@@ -36,24 +50,38 @@ function uiid_element_process($element, $form_state, $complete_form) {
     '#theme_wrappers' => array(),
     '#prefix' => '<span id="' . $id . '">',
     '#suffix' => "</span>",
+    '#required' => $element['#required'],
   );
-
   if (isset($element['#default_value'])) {
     $element['value']['#default_value'] = $element['#default_value'];
   }
+  if (!$element['#uiid']['edit']) {
+    $element['value']['#disabled'] = TRUE;
+  }
 
-  $element['generate'] = array(
-    '#type' => 'button',
-    '#name' => $id . '-generate',
-    '#value' => t('Generate'),
-    '#ajax' => array(
-      'callback' => 'uiid_generate_ajax',
-      'wrapper' => $id,
-    ),
-    '#limit_validation_errors' => array(),
-  );
+  if ($element['#uiid']['generate']) {
+    $element['generate'] = array(
+      '#type' => 'button',
+      '#name' => $id . '-generate',
+      '#value' => t('Generate'),
+      '#ajax' => array(
+        'callback' => 'uiid_generate_ajax',
+        'wrapper' => $id,
+      ),
+      '#limit_validation_errors' => array(),
+    );
+  }
 
   return $element;
+}
+
+/**
+ * Element validate callback.
+ */
+function uiid_element_validate($element, &$form_state) {
+  if ($form_state['submitted'] && !uiid_unique($element, $form_state)) {
+    form_set_error($element['#name'], t('UIID need to be unique.'));
+  }
 }
 
 /**
@@ -61,13 +89,17 @@ function uiid_element_process($element, $form_state, $complete_form) {
  */
 function uiid_generate_ajax($form, $form_state) {
   $element = uiid_form_get_element($form, $form_state);
-  if (function_exists($element['generate_callback'])) {
-    $generate_callback = $element['generate_callback'];
+  if (function_exists($element['#uiid']['generate_callback'])) {
+    $generate_callback = $element['#uiid']['generate_callback'];
   }
   else {
     $generate_callback = 'uiid_generate';
   }
-  $element['value']['#value'] = $generate_callback($element['#uiid']);
+  $element['value']['#value'] = $generate_callback($element, $form_state);
+  // @todo Limit tries times, then set error.
+  while (!uiid_unique($element, $form_state)) {
+    $element['value']['#value'] = $generate_callback($element, $form_state);
+  }
 
   return $element['value'];
 }
@@ -133,8 +165,8 @@ function theme_uiid_field($variables) {
 /**
  * Helper function to generate uiid.
  */
-function uiid_generate($uiid_settings) {
-  extract($uiid_settings);
+function uiid_generate($element, $form_state) {
+  extract($element['#uiid']);
   $len = mt_rand($min, $max);
   $ret = '';
   $rand_max = strlen($source) - 1;
@@ -143,4 +175,18 @@ function uiid_generate($uiid_settings) {
   }
 
   return $ret;
+}
+
+/**
+ * Helper function to check uiid uniqueness.
+ */
+function uiid_unique($element, $form_state) {
+  $unique_callback = isset($element['#uiid']['unique_callback']) ? $element['#uiid']['unique_callback'] : NULL;
+  if (function_exists($unique_callback)) {
+    if (!$unique_callback($element['value']['#value'], $element, $form_state)) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
 }
