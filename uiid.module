@@ -1,0 +1,198 @@
+<?php
+
+/**
+ *  Implements hook_element_info().
+ */
+function uiid_element_info() {
+  $elements['uiid'] = array(
+    '#default_value' => '',
+    '#input' => TRUE,
+    '#process' => array('uiid_element_process'),
+    '#theme' => array('uiid_field'),
+    '#theme_wrappers' => array('form_element'),
+    '#tree' => TRUE,
+    '#value_callback' => 'uiid_element_value_callback',
+    // Custom properties
+    '#source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    '#min' => 5,
+    '#max' => 5,
+  );
+  return $elements;
+}
+
+function uiid_element_process($element, $form_state, $complete_form) {
+  $id = 'uiid-' . sha1(implode('-', $element['#parents']));
+  $element['value'] = array(
+    '#type' => 'textfield',
+    //'#required' => $element['#required'],
+    '#title' => t('UIID'),
+    '#title_display' => 'invisible',
+    '#theme_wrappers' => array(),
+    '#prefix' => '<span id="' . $id . '">',
+    '#suffix' => "</span>",
+  );
+
+  if (isset($element['#default_value'])) {
+    $element['value']['#default_value'] = $element['#default_value'];
+  }
+
+  $element['generate'] = array(
+    '#type' => 'button',
+    '#name' => $id . '-generate',
+    '#value' => t('Generate'),
+    '#ajax' => array(
+      'callback' => 'uiid_generate_ajax',
+      'wrapper' => $id,
+    ),
+  );
+
+  return $element;
+}
+
+/**
+ * Ajax callback.
+ */
+function uiid_generate_ajax($form, $form_state) {
+  $element = uiid_form_get_element($form, $form_state);
+  $element['#value'] = uniqid();
+
+  return $element;
+}
+
+/**
+ * Helper function to get the element for ajax callback.
+ */
+function uiid_form_get_element($form, $form_state) {
+  $element = array();
+  $array_parents = $form_state['triggering_element']['#array_parents'];
+  // Remove the action and the actions container.
+  $array_parents = array_slice($array_parents, 0, -1);
+  $array_parents[] = 'value';
+  $element = drupal_array_get_nested_value($form, $array_parents);
+
+  return $element;
+}
+
+function uiid_element_value_callback($element, $input = FALSE, &$form_state) {
+  if ($input !== FALSE) {
+    return $input['value'];
+  }
+  elseif (!empty($element['#default_value'])) {
+    return $element['#default_value'];
+  }
+
+  return;
+}
+
+/**
+ *  Implements hook_theme().
+ */
+function uiid_theme($existing, $type, $theme, $path) {
+  return array(
+    'uiid_field' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+function theme_uiid_field($variables) {
+  $element = $variables['element'];
+  $output = '';
+  $output .= drupal_render($element['value']);
+  $output .= "";
+  $output .= drupal_render($element['generate']);
+
+  return $output;
+}
+
+/**
+ *  Implements hook_field_widget_info().
+ */
+function uiid_field_widget_info() {
+  return array(
+    'uiid_default' => array(
+      'label' => t('UIID'),
+      'field types' => array('machine_name'),
+      // @issue Where is the UI to set widget settings?
+      'settings' => array(
+        'source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        'min' => 4,
+        'max' => 4,
+      ),
+    ),
+  );
+}
+
+/**
+ *  Implements hook_field_widget_settings_form().
+ */
+function uiid_field_widget_settings_form($field, $instance) {
+  $settings = $instance['widget']['settings'];
+
+  $form = array();
+  $form['source'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Source characters'),
+    '#rows' => 3,
+    '#default_value' => $settings['source'],
+  );
+  $form['min'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum length'),
+    '#size' => 3,
+    '#default_value' => $settings['min'],
+  );
+  $form['max'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum length'),
+    '#size' => 3,
+    '#default_value' => $settings['max'],
+  );
+
+  return $form;
+}
+
+/**
+ *  Implements hook_field_widget_form().
+ */
+function uiid_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $settings = $instance['widget']['settings'];
+  $value = NULL;
+  if (isset($items[$delta]['value'])) {
+    if (is_array($items[$delta]['value'])) {
+      $value = $items[$delta]['value']['value'];
+    }
+    else {
+      $value = $items[$delta]['value'];
+    }
+  }
+  $element += array(
+    '#type' => 'uiid',
+    '#default_value' => $value,
+    '#source' => $settings['source'],
+    '#max' => $settings['max'],
+    '#min' => $settings['min'],
+  );
+
+  return $element;
+}
+
+/**
+ *  Implements hook_field_is_empty().
+ */
+function uiid_field_is_empty($item, $field) {
+  dsm($item);
+
+  return FALSE;
+}
+
+/**
+ * Helper function to generate uiid.
+ *
+ * @param $sources
+ * @param int $max
+ * @param int $min
+ */
+function uiid_generate($sources, $max = 255, $min = 1) {
+
+}

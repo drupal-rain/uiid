@@ -1,0 +1,5 @@
+name = UIID
+description = Unique item identity, a widget for machine_name field.
+core = 7.x
+version = 7.x-0.1
+package = Fields
