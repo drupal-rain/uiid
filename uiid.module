@@ -5,21 +5,27 @@
  */
 function uiid_element_info() {
   $elements['uiid'] = array(
-    '#default_value' => '',
+    '#default_value' => '', // Initiate ['uiid']['value']
     '#input' => TRUE,
     '#process' => array('uiid_element_process'),
     '#theme' => array('uiid_field'),
     '#theme_wrappers' => array('form_element'),
     '#tree' => TRUE,
-    '#value_callback' => 'uiid_element_value_callback',
     // Custom properties
-    '#source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    '#min' => 5,
-    '#max' => 5,
+    '#uiid' => array(
+      'source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      'min' => 5,
+      'max' => 5,
+      'unique_callback' => NULL,
+      'generate_callback' => 'uiid_generate',
+    ),
   );
   return $elements;
 }
 
+/**
+ * Process callback for uiid element.
+ */
 function uiid_element_process($element, $form_state, $complete_form) {
   $id = 'uiid-' . sha1(implode('-', $element['#parents']));
   $element['value'] = array(
@@ -44,6 +50,7 @@ function uiid_element_process($element, $form_state, $complete_form) {
       'callback' => 'uiid_generate_ajax',
       'wrapper' => $id,
     ),
+    '#limit_validation_errors' => array(),
   );
 
   return $element;
@@ -54,9 +61,15 @@ function uiid_element_process($element, $form_state, $complete_form) {
  */
 function uiid_generate_ajax($form, $form_state) {
   $element = uiid_form_get_element($form, $form_state);
-  $element['#value'] = uniqid();
+  if (function_exists($element['generate_callback'])) {
+    $generate_callback = $element['generate_callback'];
+  }
+  else {
+    $generate_callback = 'uiid_generate';
+  }
+  $element['value']['#value'] = $generate_callback($element['#uiid']);
 
-  return $element;
+  return $element['value'];
 }
 
 /**
@@ -65,20 +78,24 @@ function uiid_generate_ajax($form, $form_state) {
 function uiid_form_get_element($form, $form_state) {
   $element = array();
   $array_parents = $form_state['triggering_element']['#array_parents'];
-  // Remove the action and the actions container.
+  // Remove the 'generate'.
   $array_parents = array_slice($array_parents, 0, -1);
-  $array_parents[] = 'value';
   $element = drupal_array_get_nested_value($form, $array_parents);
 
   return $element;
 }
 
-function uiid_element_value_callback($element, $input = FALSE, &$form_state) {
+/**
+ * Value callback for uiid element.
+ */
+function form_type_uiid_value($element, $input = FALSE, &$form_state) {
   if ($input !== FALSE) {
-    return $input['value'];
+    return $input;
   }
   elseif (!empty($element['#default_value'])) {
-    return $element['#default_value'];
+    return array(
+      'value' => $element['#default_value']
+    );
   }
 
   return;
@@ -95,6 +112,11 @@ function uiid_theme($existing, $type, $theme, $path) {
   );
 }
 
+/**
+ * Theme function for 'uiid_field'.
+ *
+ * Should this exist?
+ */
 function theme_uiid_field($variables) {
   $element = $variables['element'];
   $output = '';
@@ -105,94 +127,20 @@ function theme_uiid_field($variables) {
   return $output;
 }
 
-/**
- *  Implements hook_field_widget_info().
- */
-function uiid_field_widget_info() {
-  return array(
-    'uiid_default' => array(
-      'label' => t('UIID'),
-      'field types' => array('machine_name'),
-      // @issue Where is the UI to set widget settings?
-      'settings' => array(
-        'source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        'min' => 4,
-        'max' => 4,
-      ),
-    ),
-  );
-}
-
-/**
- *  Implements hook_field_widget_settings_form().
- */
-function uiid_field_widget_settings_form($field, $instance) {
-  $settings = $instance['widget']['settings'];
-
-  $form = array();
-  $form['source'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Source characters'),
-    '#rows' => 3,
-    '#default_value' => $settings['source'],
-  );
-  $form['min'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Minimum length'),
-    '#size' => 3,
-    '#default_value' => $settings['min'],
-  );
-  $form['max'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Maximum length'),
-    '#size' => 3,
-    '#default_value' => $settings['max'],
-  );
-
-  return $form;
-}
-
-/**
- *  Implements hook_field_widget_form().
- */
-function uiid_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
-  $settings = $instance['widget']['settings'];
-  $value = NULL;
-  if (isset($items[$delta]['value'])) {
-    if (is_array($items[$delta]['value'])) {
-      $value = $items[$delta]['value']['value'];
-    }
-    else {
-      $value = $items[$delta]['value'];
-    }
-  }
-  $element += array(
-    '#type' => 'uiid',
-    '#default_value' => $value,
-    '#source' => $settings['source'],
-    '#max' => $settings['max'],
-    '#min' => $settings['min'],
-  );
-
-  return $element;
-}
-
-/**
- *  Implements hook_field_is_empty().
- */
-function uiid_field_is_empty($item, $field) {
-  dsm($item);
-
-  return FALSE;
-}
+// =============================================================================
+// Utility
 
 /**
  * Helper function to generate uiid.
- *
- * @param $sources
- * @param int $max
- * @param int $min
  */
-function uiid_generate($sources, $max = 255, $min = 1) {
+function uiid_generate($uiid_settings) {
+  extract($uiid_settings);
+  $len = mt_rand($min, $max);
+  $ret = '';
+  $rand_max = strlen($source) - 1;
+  for ($i = 0; $i < $len; $i++) {
+    $ret .= $source[mt_rand(0, $rand_max)];
+  }
 
+  return $ret;
 }
