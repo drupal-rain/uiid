@@ -2,4 +2,4 @@ name = UIID
 description = An element for Unique Item Identity.
 core = 7.x
 version = 7.x-0.2
-package = Fields
+package = Elements

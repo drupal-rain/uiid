@@ -60,11 +60,6 @@ function uiid_field_field_instance_settings_form($field, $instance) {
       '#default_value' => $settings['revisable']
     );
   }
-  $form['manual'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Manual input'),
-    '#default_value' => $settings['manual']
-  );
 
   return $form;
 }
@@ -117,6 +112,7 @@ function uiid_field_field_widget_form(&$form, &$form_state, $field, $instance, $
       'source' => $settings['source'],
       'max' => $settings['max'],
       'min' => $settings['min'],
+      'revisable' => $settings['revisable'],
       'unique_callback' => 'uiid_field_unique_callback',
     ),
   );
@@ -124,10 +120,6 @@ function uiid_field_field_widget_form(&$form, &$form_state, $field, $instance, $
   if (isset($element['#entity'])) {
     if (!isset($value) && $settings['initiate']) {
       $element['#default_value'] = uiid_generate($element, $form_state);
-    }
-    // @issue This disable the form submit
-    if (!$settings['manual']) {
-      $element['#uiid']['edit'] = FALSE;
     }
     if (
       $field['cardinality'] == 1

@@ -3,3 +3,5 @@ description = A field for Unique Item Identity.
 core = 7.x
 version = 7.x-0.1
 package = Fields
+
+dependencies[] = uiid

@@ -8,8 +8,8 @@ function uiid_element_settings_default() {
     'source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
     'min' => 4,
     'max' => 4,
-    'edit' => TRUE,
     'generate' => TRUE,
+    'revisable' => TRUE,
     'unique_callback' => NULL,
     'generate_callback' => 'uiid_generate',
   );
@@ -54,15 +54,15 @@ function uiid_element_process($element, $form_state, $complete_form) {
   );
   if (isset($element['#default_value'])) {
     $element['value']['#default_value'] = $element['#default_value'];
-  }
-  if (!$element['#uiid']['edit']) {
-    $element['value']['#disabled'] = TRUE;
+    if (!$element['#uiid']['revisable']) {
+      $element['value']['#disabled'] = TRUE;
+    }
   }
 
   if ($element['#uiid']['generate']) {
     $element['generate'] = array(
       '#type' => 'button',
-      '#name' => $id . '-generate',
+      '#name' => str_replace($id, '-', '_') . '_generate',
       '#value' => t('Generate'),
       '#ajax' => array(
         'callback' => 'uiid_generate_ajax',
@@ -108,7 +108,6 @@ function uiid_generate_ajax($form, $form_state) {
  * Helper function to get the element for ajax callback.
  */
 function uiid_form_get_element($form, $form_state) {
-  $element = array();
   $array_parents = $form_state['triggering_element']['#array_parents'];
   // Remove the 'generate'.
   $array_parents = array_slice($array_parents, 0, -1);
