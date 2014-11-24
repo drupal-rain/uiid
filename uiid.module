@@ -1,10 +1,14 @@
 <?php
 
+require_once drupal_get_path('module', 'uiid') . '/uiid.field.inc';
+
 /**
  * Helper function for #uiid default.
  */
-function uiid_element_settings_default() {
+function uiid_element_settings_default($info = FALSE) {
   return array(
+    'id' => $info ? NULL : drupal_html_id('uiid'),
+    'wrapper_id' => $info ? NULL : drupal_html_id('uiid-wrapper'),
     'source' => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
     'min' => 4,
     'max' => 4,
@@ -20,17 +24,33 @@ function uiid_element_settings_default() {
  */
 function uiid_element_info() {
   $elements['uiid'] = array(
-    '#default_value' => '', // Initiate ['uiid']['value']
     '#input' => TRUE,
+    '#tree' => TRUE,
+    '#default_value' => '', // Initiate ['uiid']['value']
     '#process' => array('uiid_element_process'),
     '#theme' => array('uiid_field'),
     '#theme_wrappers' => array('form_element'),
-    '#tree' => TRUE,
     '#element_validate' => array('uiid_element_validate'),
     // Custom properties
-    '#uiid' => uiid_element_settings_default(),
+    '#uiid' => uiid_element_settings_default(TRUE),
   );
   return $elements;
+}
+
+/**
+ * Value callback for uiid element.
+ */
+function form_type_uiid_value($element, $input = FALSE, &$form_state) {
+  if ($input !== FALSE && !empty($input['value'])) {
+    return $input;
+  }
+  elseif (!empty($element['#default_value'])) {
+    return array(
+      'value' => $element['#default_value']
+    );
+  }
+
+  return;
 }
 
 /**
@@ -39,6 +59,10 @@ function uiid_element_info() {
 function uiid_element_process($element, $form_state, $complete_form) {
   // Send in #uuid defaults, while sub properties are not automatically being inserted.
   $element['#uiid'] += uiid_element_settings_default();
+  $element += array(
+    '#prefix' => '<div id="'. $element['#uiid']['wrapper_id'] . '">',
+    '#suffix' => '</div>',
+  );
 
   // Unique #id
   $id = 'uiid-' . sha1(implode('-', $element['#parents']));
@@ -48,12 +72,10 @@ function uiid_element_process($element, $form_state, $complete_form) {
     '#title' => t('UIID'),
     '#title_display' => 'invisible',
     '#theme_wrappers' => array(),
-    '#prefix' => '<span id="' . $id . '">',
-    '#suffix' => "</span>",
     '#required' => $element['#required'],
   );
-  if (isset($element['#default_value'])) {
-    $element['value']['#default_value'] = $element['#default_value'];
+  if (!empty($element['#value'])) {
+    $element['value']['#default_value'] = $element['#value']['value'];
     if (!$element['#uiid']['revisable']) {
       $element['value']['#disabled'] = TRUE;
     }
@@ -62,11 +84,11 @@ function uiid_element_process($element, $form_state, $complete_form) {
   if ($element['#uiid']['generate']) {
     $element['generate'] = array(
       '#type' => 'button',
-      '#name' => str_replace($id, '-', '_') . '_generate',
+      '#name' => str_replace('-', '_', $id) . '_generate',
       '#value' => t('Generate'),
       '#ajax' => array(
         'callback' => 'uiid_generate_ajax',
-        'wrapper' => $id,
+        'wrapper' => $element['#uiid']['wrapper_id'],
       ),
       '#limit_validation_errors' => array(),
     );
@@ -101,7 +123,8 @@ function uiid_generate_ajax($form, $form_state) {
     $element['value']['#value'] = $generate_callback($element, $form_state);
   }
 
-  return $element['value'];
+  // @issue If just return $element, the '#theme_wrappers' are not being called, find out why.
+  return drupal_render($element);
 }
 
 /**
@@ -114,22 +137,6 @@ function uiid_form_get_element($form, $form_state) {
   $element = drupal_array_get_nested_value($form, $array_parents);
 
   return $element;
-}
-
-/**
- * Value callback for uiid element.
- */
-function form_type_uiid_value($element, $input = FALSE, &$form_state) {
-  if ($input !== FALSE) {
-    return $input;
-  }
-  elseif (!empty($element['#default_value'])) {
-    return array(
-      'value' => $element['#default_value']
-    );
-  }
-
-  return;
 }
 
 /**

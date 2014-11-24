@@ -3,7 +3,7 @@
 /**
  * Implements hook_field_schema().
  */
-function uiid_field_field_schema($field) {
+function uiid_field_schema($field) {
   $schema['columns']['value'] = array(
     'description' => 'The UIID value.',
     'type' => 'varchar',

@@ -3,7 +3,7 @@
 /**
  *  Implements hook_field_info().
  */
-function uiid_field_field_info() {
+function uiid_field_info() {
   return array(
     'uiid' => array(
       'label' => t('UIID'),
@@ -26,7 +26,7 @@ function uiid_field_field_info() {
 /**
  *  Implements hook_field_instance_settings_form().
  */
-function uiid_field_field_instance_settings_form($field, $instance) {
+function uiid_field_instance_settings_form($field, $instance) {
   $settings = $instance['settings'];
 
   $form = array();
@@ -67,7 +67,7 @@ function uiid_field_field_instance_settings_form($field, $instance) {
 /**
  *  Implements hook_field_is_empty().
  */
-function uiid_field_field_is_empty($item, $field) {
+function uiid_field_is_empty($item, $field) {
   if (empty($item['value'])) {
     return TRUE;
   }
@@ -78,7 +78,7 @@ function uiid_field_field_is_empty($item, $field) {
 /**
  *  Implements hook_field_widget_info().
  */
-function uiid_field_field_widget_info() {
+function uiid_field_widget_info() {
   return array(
     'uiid_default' => array(
       'label' => t('Default'),
@@ -90,7 +90,7 @@ function uiid_field_field_widget_info() {
 /**
  *  Implements hook_field_widget_form().
  */
-function uiid_field_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+function uiid_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
   $settings = $instance['settings'];
   // Item value has two formats:
   // - $items[0]['value'] from db to entity.
@@ -135,7 +135,7 @@ function uiid_field_field_widget_form(&$form, &$form_state, $field, $instance, $
 /**
  *  Implements hook_field_presave().
  */
-function uiid_field_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+function uiid_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
   // @todo
   // Seems I don't need to, the Drupal Form API handle it for me.
   /*
@@ -155,7 +155,7 @@ function uiid_field_field_presave($entity_type, $entity, $field, $instance, $lan
 /**
  *  Implements hook_field_formatter_info().
  */
-function uiid_field_field_formatter_info() {
+function uiid_field_formatter_info() {
   return array(
     'uiid_default' => array(
       'label' => t('Default'),
@@ -167,7 +167,7 @@ function uiid_field_field_formatter_info() {
 /**
  *  Implements hook_field_formatter_view().
  */
-function uiid_field_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+function uiid_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
   $element = array();
   foreach ($items as $delta => $item) {
     $element[$delta] = array('#markup' => $item['value']);
@@ -179,7 +179,7 @@ function uiid_field_field_formatter_view($entity_type, $entity, $field, $instanc
 /**
  * Callback function for uiid element.
  */
-function uiid_field_unique_callback($value, $element, $form_state) {
+function uiid_unique_callback($value, $element, $form_state) {
   $new_value = FALSE;
   if ($value != $element['#default_value']) {
     $new_value = TRUE;

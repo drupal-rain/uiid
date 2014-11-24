@@ -1,5 +1,5 @@
 name = UIID
-description = An element for Unique Item Identity.
+description = Define element and a simple field for Unique Item Identity.
 core = 7.x
-version = 7.x-0.2
-package = Elements
+version = 7.x-0.5
+package = Fields
