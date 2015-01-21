@@ -81,7 +81,7 @@ function uiid_field_is_empty($item, $field) {
 function uiid_field_widget_info() {
   return array(
     'uiid_default' => array(
-      'label' => t('Default'),
+      'label' => t('UIID input'),
       'field types' => array('uiid'),
     ),
   );
@@ -158,7 +158,7 @@ function uiid_field_presave($entity_type, $entity, $field, $instance, $langcode,
 function uiid_field_formatter_info() {
   return array(
     'uiid_default' => array(
-      'label' => t('Default'),
+      'label' => t('UIID text'),
       'field types' => array('uiid'),
     ),
   );

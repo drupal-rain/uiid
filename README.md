@@ -1,3 +1,7 @@
+Information
+===========
+UIID: Unique Item Identity
+
 Features
 ========
 * Element: uiid
